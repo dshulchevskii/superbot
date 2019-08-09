@@ -3,7 +3,6 @@ import requests
 import json
 import os
 from itertools import permutations
-import telebot
 
 
 
@@ -33,7 +32,23 @@ def get_all_subwords(word, dictionary):
                 subwords.add(subword)
 
 
+def get_main_word(text):
+    """
+    >>> get_main_word("Текст с большим количеством слов")
+    'текст'
+    >>> get_main_word("english")
+
+    >>> get_main_word("йцукенгшщзфывапролджячсмитьбюапр")
+
+    """
+    russian_chars = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
+    word = text.lower().split()[0]
+    if 0 < len(word) < 20 and all(c in russian_chars for c in word):
+        return word
+
+
 def main():
+    import telebot
     logging.info('Start app')
     DICTIONARY = load_dict(DICT_URL)
     logging.info('Load dictionary')
@@ -49,16 +64,22 @@ def main():
 
     @bot.message_handler(content_types=['text'])
     def process(message):
-        word = message.text.lower()
+        text = message.text.lower()
         chat_id = message.chat.id
-        logging.info('get word %s', word)
-        bot.send_message(chat_id, '🚀')
-        for sub_word in get_all_subwords(word, DICTIONARY):
-            logging.info('return %s', sub_word)
-            bot.send_message(chat_id, sub_word)
+        word = get_main_word(text)
+        if not word:
+            bot.send_message(chat_id, 'отправьте одно слово на русском языке не длиннее 20 символов')
+            logging.info('invalid text %s', text)
+        else:
+            bot.send_message(chat_id, 'для слова: %s' % word)
+            logging.info('get word %s', word)
+            bot.send_message(chat_id, '🚀')
+            for sub_word in get_all_subwords(word, DICTIONARY):
+                logging.info('return %s', sub_word)
+                bot.send_message(chat_id, sub_word)
 
-        bot.send_message(chat_id, '🏁')
-        logging.info('finish with word %s', word)
+            bot.send_message(chat_id, '🏁')
+            logging.info('finish with word %s', word)
 
     bot.polling()
 
